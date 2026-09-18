@@ -87,6 +87,630 @@ import type {
   HistoryPoint,
 } from "../simulation/types";
 
+type DifficultySettings =
+  (typeof DIFFICULTIES)[Difficulty];
+
+type StartScreenProps = {
+  selectedDifficulty: Difficulty;
+  isBeginnerDifficulty: boolean;
+  settings: DifficultySettings;
+  onDifficultyChange: (difficulty: Difficulty) => void;
+  onStart: () => void;
+};
+
+type DashboardHeaderProps = {
+  settings: DifficultySettings;
+  currentMonth: string;
+  currentWeekOfMonth: number;
+  currentSeason: string;
+  annualScenario: AnnualScenario;
+  isAdvancedOrExpert: boolean;
+  windShutdownWarning: boolean;
+  windShutdownCountdown: number;
+  gameState: GameState;
+  windUtilization: number;
+  highWindShutdownSpeed: number;
+  progress: number;
+  simulationSpeed: number;
+  simulationSpeedOptions: number[];
+  isRunning: boolean;
+  yearComplete: boolean;
+  onToggleRun: () => void;
+  onChangeSpeed: (speed: number) => void;
+  onRestartGame: () => void;
+};
+
+function StartScreen({
+  selectedDifficulty,
+  isBeginnerDifficulty,
+  settings,
+  onDifficultyChange,
+  onStart,
+}: StartScreenProps) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-slate-100 to-emerald-100 p-6">
+      <div className="mx-auto max-w-5xl">
+        <div className="rounded-3xl bg-white p-8 shadow-2xl md:p-10">
+          <div className="text-center">
+            <p className="text-sm font-bold uppercase tracking-widest text-blue-600">Renewable Energy Strategy Simulator</p>
+
+            <h1 className="mt-3 text-4xl font-bold text-slate-900 md:text-5xl">
+              Hydro & Wind Grid Operator
+            </h1>
+
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">Operate the grid from June through May. Match generation to demand, maintain 50 Hz, and manage reservoir water for future needs.</p>
+          </div>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-2">
+            {(Object.keys(DIFFICULTIES) as Difficulty[]).map((difficulty) => {
+              const option = DIFFICULTIES[difficulty];
+              const selected = difficulty === selectedDifficulty;
+
+              return (
+                <button
+                  key={difficulty}
+                  type="button"
+                  onClick={() => onDifficultyChange(difficulty)}
+                  className={`rounded-2xl border-2 p-5 text-left transition ${
+                    selected
+                      ? "border-blue-600 bg-blue-50 shadow-md"
+                      : "border-slate-200 bg-white hover:border-blue-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold">{option.label}</h2>
+
+                    <span
+                      className={`h-5 w-5 rounded-full border-4 ${
+                        selected ? "border-blue-600 bg-white" : "border-slate-300"
+                      }`}
+                    />
+                  </div>
+
+                  <p className="mt-2 text-sm text-slate-600">{option.description}</p>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                    <span className="rounded-lg bg-slate-100 p-2">
+                      Forecast: {option.forecastAccuracy}%
+                    </span>
+
+                    <span className="rounded-lg bg-slate-100 p-2">
+                      Monthly pause: {option.monthlyPauseSeconds}s
+                    </span>
+
+                    <span className="rounded-lg bg-slate-100 p-2">
+                      Weather events: {option.weatherEvents ? "Yes" : "No"}
+                    </span>
+
+                    <span className="rounded-lg bg-slate-100 p-2">
+                      Maintenance: {option.maintenance ? "Yes" : "No"}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <h2 className="font-bold">Selected: {settings.label}</h2>
+
+            <p className="mt-1 text-sm text-slate-600">{settings.description}</p>
+
+            {isBeginnerDifficulty && (
+              <p className="mt-3 rounded-xl bg-blue-100 p-3 text-sm text-blue-800">Beginner mode keeps both controls manual and provides suggested wind and hydro dispatch values during play.</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onStart}
+            className="mt-8 w-full rounded-2xl bg-blue-600 px-6 py-4 text-lg font-bold text-white transition hover:bg-blue-700"
+          >
+            Start {settings.label} Simulation
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DashboardHeader({
+  settings,
+  currentMonth,
+  currentWeekOfMonth,
+  currentSeason,
+  annualScenario,
+  isAdvancedOrExpert,
+  windShutdownWarning,
+  windShutdownCountdown,
+  gameState,
+  windUtilization,
+  highWindShutdownSpeed,
+  progress,
+  simulationSpeed,
+  simulationSpeedOptions,
+  isRunning,
+  yearComplete,
+  onToggleRun,
+  onChangeSpeed,
+  onRestartGame,
+}: DashboardHeaderProps) {
+  return (
+    <header className="rounded-2xl bg-slate-900 p-5 text-white shadow-lg">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wider text-blue-300">{settings.label} Difficulty</p>
+
+          <h1 className="text-2xl font-bold md:text-3xl">Hydro & Wind Grid Operator</h1>
+
+          <p className="mt-1 text-slate-300">
+            {currentMonth}, Week {currentWeekOfMonth} · {currentSeason}
+          </p>
+
+          <p className="mt-1 text-sm text-slate-300">
+            Scenario: <span className="font-semibold text-white">{annualScenario.label}</span>
+            <span className="mx-2 text-slate-400">•</span>
+            {annualScenario.summary}
+          </p>
+
+          {isAdvancedOrExpert && windShutdownWarning && (
+            <p className="mt-2 rounded-xl border border-amber-400 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-200">Turbine shutdown required: wind is {gameState.windSpeed} m/s. The grid will fail in {windShutdownCountdown}s unless wind generation is set to 0.</p>
+          )}
+
+          {isAdvancedOrExpert &&
+            gameState.windSpeed >= highWindShutdownSpeed &&
+            !windShutdownWarning &&
+            windUtilization > 0 && (
+              <p className="mt-2 rounded-xl border border-amber-400 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-200">Wind speed is rising toward the shutdown threshold. Reduce wind output to 0 before the turbines are damaged.</p>
+            )}
+
+          <p className="mt-1 text-sm text-slate-400">140 MW hydro · 120 MW wind · {TOTAL_INSTALLED_CAPACITY} MW installed</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onToggleRun}
+            disabled={yearComplete}
+            className="rounded-xl bg-white px-5 py-3 font-semibold text-slate-900 disabled:opacity-50"
+          >
+            {isRunning ? "Pause" : "Continue"}
+          </button>
+
+          <div className="flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/70 px-2 py-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+              Speed
+            </span>
+
+            {simulationSpeedOptions.map((speed) => (
+              <button
+                key={speed}
+                type="button"
+                onClick={() => onChangeSpeed(speed)}
+                className={`rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${
+                  simulationSpeed === speed
+                    ? "bg-blue-500 text-white"
+                    : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                }`}
+              >
+                {speed}x
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={onRestartGame}
+            className="rounded-xl border border-slate-500 px-5 py-3 font-semibold"
+          >
+            Change Difficulty
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <div className="mb-2 flex justify-between text-sm text-slate-300">
+          <span>June</span>
+
+          <span>{Math.round(progress)}% complete</span>
+
+          <span>May</span>
+        </div>
+
+        <div className="h-3 overflow-hidden rounded-full bg-slate-700">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-sky-400 via-emerald-400 to-blue-400 transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function AnnualPerformanceReport({
+  scoreHistory,
+}: {
+  scoreHistory: Array<{
+    week: string;
+    technical: number;
+    sustainability: number;
+    public: number;
+    powerBalance: number;
+    frequency: number;
+    reservoir: number;
+    reservoirTarget: number;
+  }>;
+}) {
+  return (
+    <section className="rounded-2xl bg-white p-5 shadow">
+      <div className="mb-5">
+        <h2 className="text-lg font-semibold">Annual Performance Report</h2>
+        <p className="text-xs text-slate-500">Scores are evaluated using a two-week rolling window so brief disturbances do not cause an immediate penalty.</p>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-blue-700">
+            Technical Score and Power Balance
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={scoreHistory}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="score" domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="metric" orientation="right" tick={{ fontSize: 10 }} />
+                <Tooltip />
+                <Legend />
+                <Line
+                  yAxisId="score"
+                  type="monotone"
+                  dataKey="technical"
+                  name="Technical Score"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={false}
+                />
+                <Line
+                  yAxisId="metric"
+                  type="monotone"
+                  dataKey="powerBalance"
+                  name="Power Balance (MW)"
+                  stroke="#64748b"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-emerald-700">
+            Sustainability Score and Reservoir
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={scoreHistory}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="score" domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="metric" orientation="right" domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <Tooltip />
+                <Legend />
+                <Line
+                  yAxisId="score"
+                  type="monotone"
+                  dataKey="sustainability"
+                  name="Sustainability Score"
+                  stroke="#10b981"
+                  strokeWidth={3}
+                  dot={false}
+                />
+                <Line
+                  yAxisId="metric"
+                  type="monotone"
+                  dataKey="reservoir"
+                  name="Reservoir Level (%)"
+                  stroke="#0ea5e9"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  yAxisId="metric"
+                  type="monotone"
+                  dataKey="reservoirTarget"
+                  name="Reservoir Target (%)"
+                  stroke="#94a3b8"
+                  strokeDasharray="5 5"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-amber-700">
+            Public Satisfaction and Frequency
+          </h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={scoreHistory}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="score" domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="metric" orientation="right" domain={[48.8, 51.2]} tick={{ fontSize: 10 }} />
+                <Tooltip />
+                <Legend />
+                <Line
+                  yAxisId="score"
+                  type="monotone"
+                  dataKey="public"
+                  name="Public Satisfaction"
+                  stroke="#f59e0b"
+                  strokeWidth={3}
+                  dot={false}
+                />
+                <Line
+                  yAxisId="metric"
+                  type="monotone"
+                  dataKey="frequency"
+                  name="Frequency (Hz)"
+                  stroke="#dc2626"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HistoryChartsSection({ history }: { history: HistoryPoint[] }) {
+  return (
+    <section className="grid gap-4 xl:grid-cols-2">
+      <div className="rounded-2xl bg-white p-5 shadow">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Demand and Generation History</h2>
+            <p className="text-xs text-slate-500">Completed weeks</p>
+          </div>
+
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+            MW
+          </span>
+        </div>
+
+        <div className="mt-3 h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={history.slice(-18)} margin={{ right: 10, left: -15 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="week" tick={{ fontSize: 10 }} />
+              <YAxis domain={[0, 260]} />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="demand" name="Demand" stroke="#ef4444" strokeWidth={3} dot={false} />
+              <Line type="monotone" dataKey="total" name="Total Generation" stroke="#111827" strokeWidth={3} dot={false} />
+              <Line type="monotone" dataKey="hydro" name="Hydro" stroke="#2563eb" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="wind" name="Wind" stroke="#10b981" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-white p-5 shadow">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Actual Weather History</h2>
+            <p className="text-xs text-slate-500">Completed weeks, not forecast conditions</p>
+          </div>
+
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+            Historical
+          </span>
+        </div>
+
+        <div className="mt-3 h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={history.slice(-18)} margin={{ right: 5, left: -15 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="week" tick={{ fontSize: 10 }} />
+              <YAxis yAxisId="wind" orientation="left" domain={[0, 45]} />
+              <YAxis yAxisId="rain" orientation="right" domain={[0, 90]} />
+              <Tooltip />
+              <Legend />
+              <Bar yAxisId="rain" dataKey="rainfall" name="Rainfall" fill="#38bdf8" opacity={0.65} />
+              <Line yAxisId="wind" type="monotone" dataKey="windSpeed" name="Wind Speed" stroke="#059669" strokeWidth={3} dot={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GenerationFleetSection({
+  gameState,
+  hydroUnitOneOutput,
+  hydroUnitTwoOutput,
+  hydroUnitTwoMaintenance,
+  windGroupThreeMaintenance,
+  windOutputPerAvailableGroup,
+}: {
+  gameState: GameState;
+  hydroUnitOneOutput: number;
+  hydroUnitTwoOutput: number;
+  hydroUnitTwoMaintenance: boolean;
+  windGroupThreeMaintenance: boolean;
+  windOutputPerAvailableGroup: number;
+}) {
+  return (
+    <section className="grid gap-4 xl:grid-cols-2">
+      <div className="rounded-2xl bg-white p-5 shadow">
+        <div className="mb-4 flex justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Hydropower Station</h2>
+            <p className="text-sm text-slate-500">Equal loading between available units</p>
+          </div>
+
+          <strong className="text-blue-700">{gameState.hydroGeneration} MW</strong>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <HydroUnitCard name="Hydro Unit H1" output={hydroUnitOneOutput} maintenance={false} />
+          <HydroUnitCard
+            name="Hydro Unit H2"
+            output={hydroUnitTwoOutput}
+            maintenance={hydroUnitTwoMaintenance}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-white p-5 shadow">
+        <div className="mb-4 flex justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Wind Farm</h2>
+            <p className="text-sm text-slate-500">Four groups · seven turbines per group · 30 MW per group</p>
+          </div>
+
+          <strong className="text-emerald-700">{gameState.windGeneration} MW</strong>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {[1, 2, 3, 4].map((groupNumber) => {
+            const maintenance = groupNumber === 3 && windGroupThreeMaintenance;
+            const output = maintenance ? 0 : windOutputPerAvailableGroup;
+            const spinning =
+              !maintenance && output > 0.5 && gameState.windSpeed >= 4 && gameState.windSpeed < 35;
+
+            return (
+              <div
+                key={groupNumber}
+                className={`rounded-xl border p-3 ${
+                  maintenance ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <strong>Wind Group W{groupNumber}</strong>
+                  <span className="text-xs font-semibold">
+                    {maintenance ? "Maintenance" : spinning ? "Generating" : "Stopped"}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex justify-between gap-1">
+                  {Array.from({ length: TURBINES_PER_GROUP }).map((_, index) => (
+                    <TurbineIcon key={index} spinning={spinning} maintenance={maintenance} />
+                  ))}
+                </div>
+
+                <p className="mt-3 text-xl font-bold">{Math.round(output)} MW</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ForecastOutlookPanel({
+  forecasts,
+  forecastChartData,
+}: {
+  forecasts: Array<{
+    month: string;
+    confidence: number;
+    wind: string;
+    rainfall: string;
+    demand: string;
+  }>;
+  forecastChartData: Array<{
+    month: string;
+    wind: number;
+    rainfall: number;
+    demand: number;
+  }>;
+}) {
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow 2xl:col-span-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Two-Month Outlook</h2>
+          <p className="text-xs text-slate-500">Future forecast, not historical weather</p>
+        </div>
+      </div>
+
+      <div className="mt-3 h-48">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={forecastChartData} margin={{ top: 8, right: 8, left: -14, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+            <YAxis domain={[0, 4]} ticks={[1, 2, 3, 4]} width={66} tick={{ fontSize: 10 }} tickFormatter={(value: number) => getForecastLevelLabel(value)} />
+            <Tooltip formatter={(value) => getForecastLevelLabel(Number(value))} />
+            <Legend wrapperStyle={{ fontSize: "11px" }} />
+            <Bar dataKey="rainfall" name="Rain" fill="#38bdf8" radius={[4, 4, 0, 0]} />
+            <Line type="monotone" dataKey="wind" name="Wind" stroke="#059669" strokeWidth={3} />
+            <Line type="monotone" dataKey="demand" name="Demand" stroke="#ef4444" strokeWidth={3} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {forecasts.map((forecast) => (
+          <div key={forecast.month} className="rounded-xl bg-slate-50 p-3 text-xs">
+            <div className="flex justify-between gap-2">
+              <strong>{forecast.month}</strong>
+              <span className="text-slate-500">{forecast.confidence}% confidence</span>
+            </div>
+
+            <p className="mt-1 text-slate-600">Wind {forecast.wind} · Rain {forecast.rainfall} · Demand {forecast.demand}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const getForecastLevel = (value: string): number => {
+  const normalizedValue = value.toLowerCase();
+
+  if (normalizedValue.includes("very high")) {
+    return 4;
+  }
+
+  if (normalizedValue.includes("high")) {
+    return 3;
+  }
+
+  if (normalizedValue.includes("moderate")) {
+    return 2;
+  }
+
+  return 1;
+};
+
+const getForecastLevelLabel = (value: number): string => {
+  if (value >= 4) {
+    return "Very high";
+  }
+
+  if (value >= 3) {
+    return "High";
+  }
+
+  if (value >= 2) {
+    return "Moderate";
+  }
+
+  return "Low";
+};
+
 // ============================================================
 // MAIN DASHBOARD COMPONENT
 // ============================================================
@@ -241,10 +865,10 @@ export default function GameDashboard() {
   // ACTIVE DIFFICULTY SETTINGS
   // ==========================================================
 
-  const settings =
-    DIFFICULTIES[
-      selectedDifficulty
-    ];
+  const settings = DIFFICULTIES[selectedDifficulty];
+  const isBeginnerDifficulty = selectedDifficulty === "beginner";
+  const isAdvancedOrExpert =
+    selectedDifficulty === "advanced" || selectedDifficulty === "expert";
 
   const simulationSpeedOptions = [
     1,
@@ -480,40 +1104,6 @@ export default function GameDashboard() {
   // 4 = Very high
   // ==========================================================
 
-  const getForecastLevel = (value: string): number => {
-    const normalizedValue = value.toLowerCase();
-
-    if (normalizedValue.includes("very high")) {
-      return 4;
-    }
-
-    if (normalizedValue.includes("high")) {
-      return 3;
-    }
-
-    if (normalizedValue.includes("moderate")) {
-      return 2;
-    }
-
-    return 1;
-  };
-
-  const getForecastLevelLabel = (value: number): string => {
-    if (value >= 4) {
-      return "Very high";
-    }
-
-    if (value >= 3) {
-      return "High";
-    }
-
-    if (value >= 2) {
-      return "Moderate";
-    }
-
-    return "Low";
-  };
-
   const forecastChartData = forecasts.map((forecast) => ({
     month: forecast.month,
     wind: getForecastLevel(forecast.wind),
@@ -532,10 +1122,7 @@ export default function GameDashboard() {
     }
 
     const shouldWarn =
-      (selectedDifficulty ===
-        "advanced" ||
-        selectedDifficulty ===
-          "expert") &&
+      isAdvancedOrExpert &&
       gameState.windSpeed >=
         HIGH_WIND_SHUTDOWN_SPEED &&
       windUtilization > 0;
@@ -912,10 +1499,7 @@ export default function GameDashboard() {
               RESERVOIR_OVERFILL_GAMEOVER_WEEKS;
 
             const highWindThisWeek =
-              (selectedDifficulty ===
-                "advanced" ||
-                selectedDifficulty ===
-                  "expert") &&
+              isAdvancedOrExpert &&
               weather.windSpeed >=
                 HIGH_WIND_SHUTDOWN_SPEED &&
               windGeneration > 0;
@@ -1309,158 +1893,13 @@ export default function GameDashboard() {
 
   if (!gameStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-100 via-slate-100 to-emerald-100 p-6">
-        <div className="mx-auto max-w-5xl">
-          <div className="rounded-3xl bg-white p-8 shadow-2xl md:p-10">
-            <div className="text-center">
-              <p className="text-sm font-bold uppercase tracking-widest text-blue-600">
-                Renewable Energy Strategy Simulator
-              </p>
-
-              <h1 className="mt-3 text-4xl font-bold text-slate-900 md:text-5xl">
-                Hydro & Wind Grid Operator
-              </h1>
-
-              <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
-                Operate the grid from
-                June through May. Match
-                generation to demand,
-                maintain 50 Hz, and
-                manage reservoir water
-                for future needs.
-              </p>
-            </div>
-
-            <div className="mt-10 grid gap-4 md:grid-cols-2">
-              {(
-                Object.keys(
-                  DIFFICULTIES
-                ) as Difficulty[]
-              ).map(
-                (difficulty) => {
-                  const option =
-                    DIFFICULTIES[
-                      difficulty
-                    ];
-
-                  const selected =
-                    difficulty ===
-                    selectedDifficulty;
-
-                  return (
-                    <button
-                      key={
-                        difficulty
-                      }
-                      type="button"
-                      onClick={() =>
-                        setSelectedDifficulty(
-                          difficulty
-                        )
-                      }
-                      className={`rounded-2xl border-2 p-5 text-left transition ${
-                        selected
-                          ? "border-blue-600 bg-blue-50 shadow-md"
-                          : "border-slate-200 bg-white hover:border-blue-300"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-bold">
-                          {
-                            option.label
-                          }
-                        </h2>
-
-                        <span
-                          className={`h-5 w-5 rounded-full border-4 ${
-                            selected
-                              ? "border-blue-600 bg-white"
-                              : "border-slate-300"
-                          }`}
-                        />
-                      </div>
-
-                      <p className="mt-2 text-sm text-slate-600">
-                        {
-                          option.description
-                        }
-                      </p>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                        <span className="rounded-lg bg-slate-100 p-2">
-                          Forecast:{" "}
-                          {
-                            option.forecastAccuracy
-                          }
-                          %
-                        </span>
-
-                        <span className="rounded-lg bg-slate-100 p-2">
-                          Monthly
-                          pause:{" "}
-                          {
-                            option.monthlyPauseSeconds
-                          }
-                          s
-                        </span>
-
-                        <span className="rounded-lg bg-slate-100 p-2">
-                          Weather
-                          events:{" "}
-                          {option.weatherEvents
-                            ? "Yes"
-                            : "No"}
-                        </span>
-
-                        <span className="rounded-lg bg-slate-100 p-2">
-                          Maintenance:{" "}
-                          {option.maintenance
-                            ? "Yes"
-                            : "No"}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                }
-              )}
-            </div>
-
-            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <h2 className="font-bold">
-                Selected:{" "}
-                {settings.label}
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-600">
-                {
-                  settings.description
-                }
-              </p>
-
-              {selectedDifficulty ===
-                "beginner" && (
-                <p className="mt-3 rounded-xl bg-blue-100 p-3 text-sm text-blue-800">
-                  Beginner mode
-                  keeps both controls
-                  manual and provides
-                  suggested wind and
-                  hydro dispatch values
-                  during play.
-                </p>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={startGame}
-              className="mt-8 w-full rounded-2xl bg-blue-600 px-6 py-4 text-lg font-bold text-white transition hover:bg-blue-700"
-            >
-              Start {settings.label}{" "}
-              Simulation
-            </button>
-          </div>
-        </div>
-      </div>
+      <StartScreen
+        selectedDifficulty={selectedDifficulty}
+        isBeginnerDifficulty={isBeginnerDifficulty}
+        settings={settings}
+        onDifficultyChange={setSelectedDifficulty}
+        onStart={startGame}
+      />
     );
   }
 
@@ -1484,139 +1923,27 @@ export default function GameDashboard() {
             DASHBOARD HEADER
             =================================================== */}
 
-        <header className="rounded-2xl bg-slate-900 p-5 text-white shadow-lg">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-blue-300">
-                {settings.label}{" "}
-                Difficulty
-              </p>
-
-              <h1 className="text-2xl font-bold md:text-3xl">
-                Hydro & Wind Grid
-                Operator
-              </h1>
-
-              <p className="mt-1 text-slate-300">
-                {currentMonth}, Week{" "}
-                {
-                  currentWeekOfMonth
-                }{" "}
-                · {currentSeason}
-              </p>
-
-              <p className="mt-1 text-sm text-slate-300">
-                Scenario: <span className="font-semibold text-white">{annualScenario.label}</span>
-                <span className="mx-2 text-slate-400">•</span>
-                {annualScenario.summary}
-              </p>
-
-              {(selectedDifficulty === "advanced" ||
-                selectedDifficulty === "expert") &&
-                windShutdownWarning && (
-                  <p className="mt-2 rounded-xl border border-amber-400 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-200">
-                    Turbine shutdown required: wind is {gameState.windSpeed} m/s. The grid will fail in {windShutdownCountdown}s unless wind generation is set to 0.
-                  </p>
-                )}
-
-              {(selectedDifficulty === "advanced" ||
-                selectedDifficulty === "expert") &&
-                gameState.windSpeed >= HIGH_WIND_SHUTDOWN_SPEED &&
-                !windShutdownWarning &&
-                windUtilization > 0 && (
-                  <p className="mt-2 rounded-xl border border-amber-400 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-200">
-                    Wind speed is rising toward the shutdown threshold. Reduce wind output to 0 before the turbines are damaged.
-                  </p>
-                )}
-
-              <p className="mt-1 text-sm text-slate-400">
-                140 MW hydro · 120 MW
-                wind ·{" "}
-                {
-                  TOTAL_INSTALLED_CAPACITY
-                }{" "}
-                MW installed
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setIsRunning(
-                    (current) =>
-                      !current
-                  )
-                }
-                disabled={
-                  yearComplete
-                }
-                className="rounded-xl bg-white px-5 py-3 font-semibold text-slate-900 disabled:opacity-50"
-              >
-                {isRunning
-                  ? "Pause"
-                  : "Continue"}
-              </button>
-
-              <div className="flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/70 px-2 py-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-                  Speed
-                </span>
-
-                {simulationSpeedOptions.map((speed) => (
-                  <button
-                    key={speed}
-                    type="button"
-                    onClick={() =>
-                      setSimulationSpeed(speed)
-                    }
-                    className={`rounded-lg px-2.5 py-1.5 text-sm font-semibold transition ${
-                      simulationSpeed === speed
-                        ? "bg-blue-500 text-white"
-                        : "bg-slate-700 text-slate-200 hover:bg-slate-600"
-                    }`}
-                  >
-                    {speed}x
-                  </button>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={
-                  restartGame
-                }
-                className="rounded-xl border border-slate-500 px-5 py-3 font-semibold"
-              >
-                Change Difficulty
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-5">
-            <div className="mb-2 flex justify-between text-sm text-slate-300">
-              <span>June</span>
-
-              <span>
-                {Math.round(
-                  progress
-                )}
-                % complete
-              </span>
-
-              <span>May</span>
-            </div>
-
-            <div className="h-3 overflow-hidden rounded-full bg-slate-700">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-sky-400 via-emerald-400 to-blue-400 transition-all duration-500"
-                style={{
-                  width: `${progress}%`,
-                }}
-              />
-            </div>
-          </div>
-        </header>
+        <DashboardHeader
+          settings={settings}
+          currentMonth={currentMonth}
+          currentWeekOfMonth={currentWeekOfMonth}
+          currentSeason={currentSeason}
+          annualScenario={annualScenario}
+        isAdvancedOrExpert={isAdvancedOrExpert}
+          windShutdownWarning={windShutdownWarning}
+          windShutdownCountdown={windShutdownCountdown}
+          gameState={gameState}
+          windUtilization={windUtilization}
+          highWindShutdownSpeed={HIGH_WIND_SHUTDOWN_SPEED}
+          progress={progress}
+          simulationSpeed={simulationSpeed}
+          simulationSpeedOptions={simulationSpeedOptions}
+          isRunning={isRunning}
+          yearComplete={yearComplete}
+          onToggleRun={() => setIsRunning((current) => !current)}
+          onChangeSpeed={setSimulationSpeed}
+          onRestartGame={restartGame}
+        />
 
         {/* ================= END DASHBOARD HEADER ============== */}
 
@@ -1678,163 +2005,7 @@ export default function GameDashboard() {
         )}
 
         {yearComplete && scoreHistory.length > 0 && (
-          <section className="rounded-2xl bg-white p-5 shadow">
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold">
-                Annual Performance Report
-              </h2>
-              <p className="text-xs text-slate-500">
-                Scores are evaluated using a two-week rolling window so brief
-                disturbances do not cause an immediate penalty.
-              </p>
-            </div>
-
-            <div className="grid gap-6 xl:grid-cols-3">
-              <div>
-                <h3 className="mb-2 text-sm font-semibold text-blue-700">
-                  Technical Score and Power Balance
-                </h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={scoreHistory}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="week" tick={{ fontSize: 10 }} />
-                      <YAxis
-                        yAxisId="score"
-                        domain={[0, 100]}
-                        tick={{ fontSize: 10 }}
-                      />
-                      <YAxis
-                        yAxisId="metric"
-                        orientation="right"
-                        tick={{ fontSize: 10 }}
-                      />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        yAxisId="score"
-                        type="monotone"
-                        dataKey="technical"
-                        name="Technical Score"
-                        stroke="#2563eb"
-                        strokeWidth={3}
-                        dot={false}
-                      />
-                      <Line
-                        yAxisId="metric"
-                        type="monotone"
-                        dataKey="powerBalance"
-                        name="Power Balance (MW)"
-                        stroke="#64748b"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="mb-2 text-sm font-semibold text-emerald-700">
-                  Sustainability Score and Reservoir
-                </h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={scoreHistory}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="week" tick={{ fontSize: 10 }} />
-                      <YAxis
-                        yAxisId="score"
-                        domain={[0, 100]}
-                        tick={{ fontSize: 10 }}
-                      />
-                      <YAxis
-                        yAxisId="metric"
-                        orientation="right"
-                        domain={[0, 100]}
-                        tick={{ fontSize: 10 }}
-                      />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        yAxisId="score"
-                        type="monotone"
-                        dataKey="sustainability"
-                        name="Sustainability Score"
-                        stroke="#10b981"
-                        strokeWidth={3}
-                        dot={false}
-                      />
-                      <Line
-                        yAxisId="metric"
-                        type="monotone"
-                        dataKey="reservoir"
-                        name="Reservoir Level (%)"
-                        stroke="#0ea5e9"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                      <Line
-                        yAxisId="metric"
-                        type="monotone"
-                        dataKey="reservoirTarget"
-                        name="Reservoir Target (%)"
-                        stroke="#94a3b8"
-                        strokeDasharray="5 5"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="mb-2 text-sm font-semibold text-amber-700">
-                  Public Satisfaction and Frequency
-                </h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={scoreHistory}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="week" tick={{ fontSize: 10 }} />
-                      <YAxis
-                        yAxisId="score"
-                        domain={[0, 100]}
-                        tick={{ fontSize: 10 }}
-                      />
-                      <YAxis
-                        yAxisId="metric"
-                        orientation="right"
-                        domain={[48.8, 51.2]}
-                        tick={{ fontSize: 10 }}
-                      />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        yAxisId="score"
-                        type="monotone"
-                        dataKey="public"
-                        name="Public Satisfaction"
-                        stroke="#f59e0b"
-                        strokeWidth={3}
-                        dot={false}
-                      />
-                      <Line
-                        yAxisId="metric"
-                        type="monotone"
-                        dataKey="frequency"
-                        name="Frequency (Hz)"
-                        stroke="#dc2626"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </section>
+          <AnnualPerformanceReport scoreHistory={scoreHistory} />
         )}
 
         {/* =============== END YEAR COMPLETE MESSAGE ========== */}
@@ -1871,31 +2042,19 @@ export default function GameDashboard() {
               </span>
             </div>
 
-            {selectedDifficulty === "beginner" && (
+            {isBeginnerDifficulty && (
               <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
-                  Suggested dispatch
-                </p>
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Suggested dispatch</p>
 
                 <div className="mt-2 grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-slate-500">
-                      Wind
-                    </p>
-
-                    <p className="font-bold text-emerald-700">
-                      {recommendedWind} MW
-                    </p>
+                    <p className="text-xs text-slate-500">Wind</p>
+                    <p className="font-bold text-emerald-700">{recommendedWind} MW</p>
                   </div>
 
                   <div>
-                    <p className="text-xs text-slate-500">
-                      Hydro
-                    </p>
-
-                    <p className="font-bold text-blue-700">
-                      {recommendedHydro} MW
-                    </p>
+                    <p className="text-xs text-slate-500">Hydro</p>
+                    <p className="font-bold text-blue-700">{recommendedHydro} MW</p>
                   </div>
                 </div>
               </div>
@@ -1936,9 +2095,7 @@ export default function GameDashboard() {
                   <span>100%</span>
                 </div>
 
-                <p className="mt-2 text-xs text-slate-500">
-                  Available capacity: {availableHydroCapacity} MW
-                </p>
+                <p className="mt-2 text-xs text-slate-500">Available capacity: {availableHydroCapacity} MW</p>
               </div>
 
               <div>
@@ -1975,10 +2132,7 @@ export default function GameDashboard() {
                   <span>100%</span>
                 </div>
 
-                <p className="mt-2 text-xs text-slate-500">
-                  Available now:{" "}
-                  {gameState.availableWindGeneration} MW
-                </p>
+                <p className="mt-2 text-xs text-slate-500">Available now: {gameState.availableWindGeneration} MW</p>
               </div>
             </div>
           </div>
@@ -1994,9 +2148,7 @@ export default function GameDashboard() {
               <FrequencyGauge frequency={gameState.frequency} />
             </div>
 
-            <p className="mt-3 text-center text-xs text-slate-500">
-              Stable operating range: 49.8 to 50.2 Hz
-            </p>
+            <p className="mt-3 text-center text-xs text-slate-500">Stable operating range: 49.8 to 50.2 Hz</p>
           </div>
 
           {/* LIVE GRID STATUS */}
@@ -2049,9 +2201,7 @@ export default function GameDashboard() {
                     : "bg-amber-100 text-amber-700"
               }`}
             >
-              <p className="text-xs font-bold uppercase tracking-wide">
-                Power Balance
-              </p>
+              <p className="text-xs font-bold uppercase tracking-wide">Power Balance</p>
 
               <p className="mt-1 text-4xl font-bold">
                 {powerBalance > 0 ? "+" : ""}
@@ -2121,109 +2271,10 @@ export default function GameDashboard() {
 
           {/* FUTURE FORECAST */}
 
-          <div className="rounded-2xl bg-white p-5 shadow 2xl:col-span-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  Two-Month Outlook
-                </h2>
-
-                <p className="text-xs text-slate-500">
-                  Future forecast, not historical weather
-                </p>
-              </div>
-
-            </div>
-
-            <div className="mt-3 h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={forecastChartData}
-                  margin={{
-                    top: 8,
-                    right: 8,
-                    left: -14,
-                    bottom: 0,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 12 }}
-                  />
-
-                  <YAxis
-                    domain={[0, 4]}
-                    ticks={[1, 2, 3, 4]}
-                    width={66}
-                    tick={{ fontSize: 10 }}
-                    tickFormatter={(value: number) =>
-                      getForecastLevelLabel(value)
-                    }
-                  />
-
-                  <Tooltip
-                    formatter={(value) =>
-                      getForecastLevelLabel(Number(value))
-                    }
-                  />
-
-                  <Legend
-                    wrapperStyle={{
-                      fontSize: "11px",
-                    }}
-                  />
-
-                  <Bar
-                    dataKey="rainfall"
-                    name="Rain"
-                    fill="#38bdf8"
-                    radius={[4, 4, 0, 0]}
-                  />
-
-                  <Line
-                    type="monotone"
-                    dataKey="wind"
-                    name="Wind"
-                    stroke="#059669"
-                    strokeWidth={3}
-                  />
-
-                  <Line
-                    type="monotone"
-                    dataKey="demand"
-                    name="Demand"
-                    stroke="#ef4444"
-                    strokeWidth={3}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {forecasts.map((forecast) => (
-                <div
-                  key={forecast.month}
-                  className="rounded-xl bg-slate-50 p-3 text-xs"
-                >
-                  <div className="flex justify-between gap-2">
-                    <strong>{forecast.month}</strong>
-
-                    <span className="text-slate-500">
-                      {forecast.confidence}% confidence
-                    </span>
-                  </div>
-
-                  <p className="mt-1 text-slate-600">
-                    Wind {forecast.wind} · Rain{" "}
-                    {forecast.rainfall} · Demand{" "}
-                    {forecast.demand}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ForecastOutlookPanel
+            forecasts={forecasts}
+            forecastChartData={forecastChartData}
+          />
         </section>
 
         {/* ===================================================
@@ -2233,269 +2284,20 @@ export default function GameDashboard() {
             The forecast above shows the next two months.
             =================================================== */}
 
-        <section className="grid gap-4 xl:grid-cols-2">
-          <div className="rounded-2xl bg-white p-5 shadow">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  Demand and Generation History
-                </h2>
-
-                <p className="text-xs text-slate-500">
-                  Completed weeks
-                </p>
-              </div>
-
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-                MW
-              </span>
-            </div>
-
-            <div className="mt-3 h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={history.slice(-18)}
-                  margin={{
-                    right: 10,
-                    left: -15,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-
-                  <XAxis
-                    dataKey="week"
-                    tick={{ fontSize: 10 }}
-                  />
-
-                  <YAxis domain={[0, 260]} />
-
-                  <Tooltip />
-                  <Legend />
-
-                  <Line
-                    type="monotone"
-                    dataKey="demand"
-                    name="Demand"
-                    stroke="#ef4444"
-                    strokeWidth={3}
-                    dot={false}
-                  />
-
-                  <Line
-                    type="monotone"
-                    dataKey="total"
-                    name="Total Generation"
-                    stroke="#111827"
-                    strokeWidth={3}
-                    dot={false}
-                  />
-
-                  <Line
-                    type="monotone"
-                    dataKey="hydro"
-                    name="Hydro"
-                    stroke="#2563eb"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-
-                  <Line
-                    type="monotone"
-                    dataKey="wind"
-                    name="Wind"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-white p-5 shadow">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  Actual Weather History
-                </h2>
-
-                <p className="text-xs text-slate-500">
-                  Completed weeks, not forecast conditions
-                </p>
-              </div>
-
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-                Historical
-              </span>
-            </div>
-
-            <div className="mt-3 h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={history.slice(-18)}
-                  margin={{
-                    right: 5,
-                    left: -15,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-
-                  <XAxis
-                    dataKey="week"
-                    tick={{ fontSize: 10 }}
-                  />
-
-                  <YAxis
-                    yAxisId="wind"
-                    orientation="left"
-                    domain={[0, 45]}
-                  />
-
-                  <YAxis
-                    yAxisId="rain"
-                    orientation="right"
-                    domain={[0, 90]}
-                  />
-
-                  <Tooltip />
-                  <Legend />
-
-                  <Bar
-                    yAxisId="rain"
-                    dataKey="rainfall"
-                    name="Rainfall"
-                    fill="#38bdf8"
-                    opacity={0.65}
-                  />
-
-                  <Line
-                    yAxisId="wind"
-                    type="monotone"
-                    dataKey="windSpeed"
-                    name="Wind Speed"
-                    stroke="#059669"
-                    strokeWidth={3}
-                    dot={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </section>
+        <HistoryChartsSection history={history} />
 
         {/* ===================================================
             GENERATION FLEET
             =================================================== */}
 
-        <section className="grid gap-4 xl:grid-cols-2">
-          <div className="rounded-2xl bg-white p-5 shadow">
-            <div className="mb-4 flex justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  Hydropower Station
-                </h2>
-
-                <p className="text-sm text-slate-500">
-                  Equal loading between available units
-                </p>
-              </div>
-
-              <strong className="text-blue-700">
-                {gameState.hydroGeneration} MW
-              </strong>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <HydroUnitCard
-                name="Hydro Unit H1"
-                output={hydroUnitOneOutput}
-                maintenance={false}
-              />
-
-              <HydroUnitCard
-                name="Hydro Unit H2"
-                output={hydroUnitTwoOutput}
-                maintenance={hydroUnitTwoMaintenance}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-white p-5 shadow">
-            <div className="mb-4 flex justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  Wind Farm
-                </h2>
-
-                <p className="text-sm text-slate-500">
-                  Four groups · seven turbines per group · 30 MW
-                  per group
-                </p>
-              </div>
-
-              <strong className="text-emerald-700">
-                {gameState.windGeneration} MW
-              </strong>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              {[1, 2, 3, 4].map((groupNumber) => {
-                const maintenance =
-                  groupNumber === 3 &&
-                  windGroupThreeMaintenance;
-
-                const output = maintenance
-                  ? 0
-                  : windOutputPerAvailableGroup;
-
-                const spinning =
-                  !maintenance &&
-                  output > 0.5 &&
-                  gameState.windSpeed >= 4 &&
-                  gameState.windSpeed < 35;
-
-                return (
-                  <div
-                    key={groupNumber}
-                    className={`rounded-xl border p-3 ${
-                      maintenance
-                        ? "border-red-200 bg-red-50"
-                        : "border-emerald-200 bg-emerald-50"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <strong>Wind Group W{groupNumber}</strong>
-
-                      <span className="text-xs font-semibold">
-                        {maintenance
-                          ? "Maintenance"
-                          : spinning
-                            ? "Generating"
-                            : "Stopped"}
-                      </span>
-                    </div>
-
-                    <div className="mt-3 flex justify-between gap-1">
-                      {Array.from({
-                        length: TURBINES_PER_GROUP,
-                      }).map((_, index) => (
-                        <TurbineIcon
-                          key={index}
-                          spinning={spinning}
-                          maintenance={maintenance}
-                        />
-                      ))}
-                    </div>
-
-                    <p className="mt-3 text-xl font-bold">
-                      {Math.round(output)} MW
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
+        <GenerationFleetSection
+          gameState={gameState}
+          hydroUnitOneOutput={hydroUnitOneOutput}
+          hydroUnitTwoOutput={hydroUnitTwoOutput}
+          hydroUnitTwoMaintenance={hydroUnitTwoMaintenance}
+          windGroupThreeMaintenance={windGroupThreeMaintenance}
+          windOutputPerAvailableGroup={windOutputPerAvailableGroup}
+        />
 
         {/* =============== END PRIMARY STATUS PANELS ========== */}
 
@@ -2578,60 +2380,33 @@ export default function GameDashboard() {
 
         <section className="grid gap-6 md:grid-cols-4">
           <div className="rounded-2xl bg-slate-900 p-6 text-center text-white shadow">
-            <p className="text-sm uppercase tracking-wide text-slate-400">
-              Overall
-            </p>
+            <p className="text-sm uppercase tracking-wide text-slate-400">Overall</p>
 
-            <p className="mt-2 text-5xl font-bold">
-              {overallScore}
-            </p>
+            <p className="mt-2 text-5xl font-bold">{overallScore}</p>
           </div>
 
           <div className="rounded-2xl bg-white p-6 text-center shadow">
-            <p className="text-sm uppercase tracking-wide text-slate-500">
-              Technical
-            </p>
+            <p className="text-sm uppercase tracking-wide text-slate-500">Technical</p>
 
-            <p className="mt-2 text-5xl font-bold text-blue-600">
-              {technicalScore}
-            </p>
+            <p className="mt-2 text-5xl font-bold text-blue-600">{technicalScore}</p>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Frequency stability and
-              demand matching
-            </p>
+            <p className="mt-2 text-sm text-slate-500">Frequency stability and demand matching</p>
           </div>
 
           <div className="rounded-2xl bg-white p-6 text-center shadow">
-            <p className="text-sm uppercase tracking-wide text-slate-500">
-              Sustainability
-            </p>
+            <p className="text-sm uppercase tracking-wide text-slate-500">Sustainability</p>
 
-            <p className="mt-2 text-5xl font-bold text-emerald-600">
-              {
-                sustainabilityScore
-              }
-            </p>
+            <p className="mt-2 text-5xl font-bold text-emerald-600">{sustainabilityScore}</p>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Wind utilization and
-              reservoir management
-            </p>
+            <p className="mt-2 text-sm text-slate-500">Wind utilization and reservoir management</p>
           </div>
 
           <div className="rounded-2xl bg-white p-6 text-center shadow">
-            <p className="text-sm uppercase tracking-wide text-slate-500">
-              Public Satisfaction
-            </p>
+            <p className="text-sm uppercase tracking-wide text-slate-500">Public Satisfaction</p>
 
-            <p className="mt-2 text-5xl font-bold text-amber-500">
-              {publicScore}
-            </p>
+            <p className="mt-2 text-5xl font-bold text-amber-500">{publicScore}</p>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Reliable electricity
-              delivery
-            </p>
+            <p className="mt-2 text-sm text-slate-500">Reliable electricity delivery</p>
           </div>
         </section>
 
