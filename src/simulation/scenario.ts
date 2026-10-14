@@ -1,4 +1,5 @@
 import { getMonthName } from "./calendar";
+import { TOTAL_INSTALLED_CAPACITY } from "./constants";
 import { applyEventToWeather, getBaseConditions } from "./weather";
 import { clamp } from "./utils";
 
@@ -112,6 +113,9 @@ const getScenarioMonthValue = (
   );
 };
 
+const capDemand = (demand: number) =>
+  clamp(demand, 0, TOTAL_INSTALLED_CAPACITY);
+
 const buildScenarioMonth = (
   monthIndex: number,
   profile: (typeof SCENARIO_DEFINITIONS)[ScenarioType]
@@ -141,13 +145,15 @@ const buildScenarioMonth = (
         18
       )
     ),
-    demand: Math.round(
-      getScenarioMonthValue(
-        monthIndex,
-        base.demand,
-        profile.demandBias,
-        profile.demandSwing,
-        22
+    demand: capDemand(
+      Math.round(
+        getScenarioMonthValue(
+          monthIndex,
+          base.demand,
+          profile.demandBias,
+          profile.demandSwing,
+          22
+        )
       )
     ),
   };
@@ -222,17 +228,22 @@ export const getScenarioMonthWeather = (
   const baseWeather = {
     windSpeed: month.windSpeed,
     rainfall: month.rainfall,
-    demand: month.demand,
+    demand: capDemand(month.demand),
   };
 
   if (event === "none") {
     return baseWeather;
   }
 
-  return applyEventToWeather(
+  const modifiedWeather = applyEventToWeather(
     baseWeather.windSpeed,
     baseWeather.rainfall,
     baseWeather.demand,
     event
   );
+
+  return {
+    ...modifiedWeather,
+    demand: capDemand(modifiedWeather.demand),
+  };
 };
