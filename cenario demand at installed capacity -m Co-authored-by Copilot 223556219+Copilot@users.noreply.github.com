@@ -1,0 +1,68 @@
+[1mdiff --git a/src/simulation/scenario.ts b/src/simulation/scenario.ts[m
+[1mindex 52a8eb7..64b1a77 100644[m
+[1m--- a/src/simulation/scenario.ts[m
+[1m+++ b/src/simulation/scenario.ts[m
+[36m@@ -1,4 +1,5 @@[m
+ import { getMonthName } from "./calendar";[m
+[32m+[m[32mimport { TOTAL_INSTALLED_CAPACITY } from "./constants";[m
+ import { applyEventToWeather, getBaseConditions } from "./weather";[m
+ import { clamp } from "./utils";[m
+ [m
+[36m@@ -112,6 +113,9 @@[m [mconst getScenarioMonthValue = ([m
+   );[m
+ };[m
+ [m
+[32m+[m[32mconst capDemand = (demand: number) =>[m
+[32m+[m[32m  clamp(demand, 0, TOTAL_INSTALLED_CAPACITY);[m
+[32m+[m
+ const buildScenarioMonth = ([m
+   monthIndex: number,[m
+   profile: (typeof SCENARIO_DEFINITIONS)[ScenarioType][m
+[36m@@ -141,13 +145,15 @@[m [mconst buildScenarioMonth = ([m
+         18[m
+       )[m
+     ),[m
+[31m-    demand: Math.round([m
+[31m-      getScenarioMonthValue([m
+[31m-        monthIndex,[m
+[31m-        base.demand,[m
+[31m-        profile.demandBias,[m
+[31m-        profile.demandSwing,[m
+[31m-        22[m
+[32m+[m[32m    demand: capDemand([m
+[32m+[m[32m      Math.round([m
+[32m+[m[32m        getScenarioMonthValue([m
+[32m+[m[32m          monthIndex,[m
+[32m+[m[32m          base.demand,[m
+[32m+[m[32m          profile.demandBias,[m
+[32m+[m[32m          profile.demandSwing,[m
+[32m+[m[32m          22[m
+[32m+[m[32m        )[m
+       )[m
+     ),[m
+   };[m
+[36m@@ -222,17 +228,22 @@[m [mexport const getScenarioMonthWeather = ([m
+   const baseWeather = {[m
+     windSpeed: month.windSpeed,[m
+     rainfall: month.rainfall,[m
+[31m-    demand: month.demand,[m
+[32m+[m[32m    demand: capDemand(month.demand),[m
+   };[m
+ [m
+   if (event === "none") {[m
+     return baseWeather;[m
+   }[m
+ [m
+[31m-  return applyEventToWeather([m
+[32m+[m[32m  const modifiedWeather = applyEventToWeather([m
+     baseWeather.windSpeed,[m
+     baseWeather.rainfall,[m
+     baseWeather.demand,[m
+     event[m
+   );[m
+[32m+[m
+[32m+[m[32m  return {[m
+[32m+[m[32m    ...modifiedWeather,[m
+[32m+[m[32m    demand: capDemand(modifiedWeather.demand),[m
+[32m+[m[32m  };[m
+ };[m

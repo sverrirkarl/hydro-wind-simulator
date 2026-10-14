@@ -782,10 +782,6 @@ export default function GameDashboard() {
   ] = useState(1);
 
   // ==========================================================
-  // MONTHLY BRIEFING STATE
-  // ==========================================================
-
-  // ==========================================================
   // INITIAL SIMULATION STATE
   // ==========================================================
 
@@ -1911,13 +1907,6 @@ export default function GameDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-100 p-3 lg:p-4">
-      {/* =====================================================
-          MONTHLY BRIEFING MODAL
-
-          FUTURE COMPONENT EXTRACTION TARGET:
-          src/components/MonthlyBriefing.tsx
-          ===================================================== */}
-
       <div className="mx-auto max-w-[1920px] space-y-4">
         {/* ===================================================
             DASHBOARD HEADER
@@ -2365,7 +2354,7 @@ export default function GameDashboard() {
                 {windGroupThreeMaintenance
                   ? "Unavailable. Wind capacity is reduced by 30 MW."
                   : settings.maintenance
-                    ? "Available. Planned autumn maintenance is shown in briefings."
+                    ? "Available. Planned autumn maintenance remains on the schedule."
                     : "Available. Maintenance events are disabled."}
               </p>
             </div>
